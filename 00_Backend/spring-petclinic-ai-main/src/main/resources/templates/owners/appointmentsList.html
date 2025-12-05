@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Appointments</title></head>
+<body>
+<h2>Appointments für <span th:text="${pet?.name}">Pet</span></h2>
+
+<p th:if="${#lists.isEmpty(appointments)}">Keine Termine.</p>
+
+<ul>
+  <li th:each="a : ${appointments}">
+    <span th:text="${#temporals.format(a.startTime,'dd.MM.yyyy HH:mm')}">Zeit</span>
+    – <span th:text="${a.durationMinutes}">30</span> Min
+  </li>
+</ul>
+
+<p><a th:href="@{|/owners/${owner.id}|}">Zurück</a></p>
+</body>
+</html>

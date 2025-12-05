@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Timeline - <span th:text="${pet.name}">Pet</span></title>
+  <link rel="stylesheet" href="/resources/css/petclinic.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container-fluid">
+  <h2>Timeline von <span th:text="${pet.name}">Pet</span></h2>
+
+  <div class="mb-3">
+    <a th:href="@{/owners/{ownerId}/pets/{petId}/visits/new(ownerId=${owner.id}, petId=${pet.id})}"
+       class="btn btn-primary">Neuen Eintrag hinzufügen</a>
+    <a th:href="@{/owners/{ownerId}(ownerId=${owner.id})}"
+       class="btn btn-secondary">Zurück zum Besitzer</a>
+  </div>
+
+  <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+  <div th:each="visit : ${timelineVisits}" class="card mb-3">
+    <div class="card-header">
+      <strong>ID: <span th:text="${visit.id}">1</span></strong>
+      <span th:text="${#temporals.format(visit.date, 'dd.MM.yyyy')}">18.03.2020</span>
+      <span th:if="${visit.time}">, <span th:text="${#temporals.format(visit.time, 'HH:mm')}">14:30</span></span>
+
+      <span th:if="${visit.procedureType}" class="badge bg-primary ms-2" th:text="${visit.procedureType}">Impfung</span>
+    </div>
+    <div class="card-body">
+      <h5 class="card-title" th:text="${visit.description}">Beschreibung</h5>
+      <p class="card-text" th:if="${visit.notes}" th:text="${visit.notes}">Notizen</p>
+      <p class="card-text" th:if="${visit.vetName}">
+        <small class="text-muted">Tierarzt: <span th:text="${visit.vetName}">Dr. Müller</span></small>
+      </p>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(timelineVisits)}" class="alert alert-info">
+    Noch keine Timeline-Einträge vorhanden.
+  </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

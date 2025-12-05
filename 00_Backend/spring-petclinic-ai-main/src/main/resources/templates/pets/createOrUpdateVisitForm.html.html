@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Neuer Timeline-Eintrag</title>
+  <link rel="stylesheet" href="/resources/css/petclinic.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container-fluid">
+  <h2>Neuen Timeline-Eintrag für <span th:text="${pet.name}">Pet</span></h2>
+
+  <form th:object="${visit}" th:action="@{/owners/{ownerId}/pets/{petId}/visits/new(ownerId=${owner.id}, petId=${pet.id})}"
+        method="post" class="form-horizontal">
+
+    <div class="form-group" th:classappend="${#fields.hasErrors('date')} ? 'has-error'">
+      <label class="col-sm-2 control-label">Datum</label>
+      <div class="col-sm-10">
+        <input type="date" th:field="*{date}" class="form-control"/>
+        <span th:errors="*{date}" class="help-inline"></span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label">Uhrzeit</label>
+      <div class="col-sm-10">
+        <input type="time" th:field="*{time}" class="form-control"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label">Art der Behandlung</label>
+      <div class="col-sm-10">
+        <select th:field="*{procedureType}" class="form-control">
+          <option value="">-- Bitte auswählen --</option>
+          <option th:each="type : ${procedureTypes}"
+                  th:value="${type}"
+                  th:text="${type}"></option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" th:classappend="${#fields.hasErrors('description')} ? 'has-error'">
+      <label class="col-sm-2 control-label">Beschreibung</label>
+      <div class="col-sm-10">
+        <input type="text" th:field="*{description}" class="form-control" placeholder="z.B. Jahresimpfung, Routine-Check"/>
+        <span th:errors="*{description}" class="help-inline"></span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label">Notizen</label>
+      <div class="col-sm-10">
+                    <textarea th:field="*{notes}" class="form-control" rows="3"
+                              placeholder="Zusätzliche Notizen..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label">Tierarzt</label>
+      <div class="col-sm-10">
+        <input type="text" th:field="*{vetName}" class="form-control" placeholder="Name des Tierarztes"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-primary">Eintrag hinzufügen</button>
+        <a th:href="@{/owners/{ownerId}/pets/{petId}/timeline(ownerId=${owner.id}, petId=${pet.id})}"
+           class="btn btn-default">Abbrechen</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>
