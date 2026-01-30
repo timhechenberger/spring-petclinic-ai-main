@@ -29,7 +29,6 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
   void addAppointment(DateTime dt) {
     setState(() {
-      // NICHT sortieren -> neuer Eintrag bleibt unten
       appointments.add(Appointment(dt));
     });
   }

@@ -15,7 +15,6 @@ class AppointmentDateSelector extends StatelessWidget {
 
   void _shift(int dir) {
     if (mode == AppointmentMode.month) {
-      // gleicher Tag im nächsten/vorigen Monat (clamp falls Monat weniger Tage hat)
       final target = DateTime(cursor.year, cursor.month + dir, 1);
       final day = _clampDay(cursor.year, cursor.month + dir, cursor.day);
       onChanged(DateTime(target.year, target.month, day));
@@ -23,20 +22,18 @@ class AppointmentDateSelector extends StatelessWidget {
     }
 
     if (mode == AppointmentMode.year) {
-      // gleicher Tag im nächsten/vorigen Jahr (clamp bei Schaltjahr etc.)
       final year = cursor.year + dir;
       final day = _clampDay(year, cursor.month, cursor.day);
       onChanged(DateTime(year, cursor.month, day));
       return;
     }
 
-    // Tag-Modus
     onChanged(cursor.add(Duration(days: dir)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final label = _fmtDate(cursor); // IMMER ganzes Datum
+    final label = _fmtDate(cursor);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -67,7 +64,6 @@ class AppointmentDateSelector extends StatelessWidget {
   }
 
   int _clampDay(int year, int month, int desiredDay) {
-    // month kann durch +/- verschoben sein -> DateTime normalisiert das
     final firstOfMonth = DateTime(year, month, 1);
     final firstNextMonth = DateTime(firstOfMonth.year, firstOfMonth.month + 1, 1);
     final lastDay = firstNextMonth.subtract(const Duration(days: 1)).day;
