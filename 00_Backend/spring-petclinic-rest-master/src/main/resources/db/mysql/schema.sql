@@ -70,3 +70,17 @@ CREATE TABLE IF NOT EXISTS roles (
   KEY fk_username_idx (username),
   CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES users (username)
 ) engine=InnoDB;
+
+CREATE TABLE timeline_events (
+                                 id INT NOT NULL AUTO_INCREMENT,
+                                 pet_id INT NOT NULL,
+                                 event_date DATE NOT NULL,
+                                 event_type VARCHAR(32) NOT NULL,
+                                 title VARCHAR(120) NOT NULL,
+                                 description VARCHAR(1000),
+                                 created_at TIMESTAMP NOT NULL,
+                                 PRIMARY KEY (id),
+                                 CONSTRAINT fk_timeline_events_pet FOREIGN KEY (pet_id) REFERENCES pets(id)
+);
+
+CREATE INDEX idx_timeline_events_pet_date ON timeline_events(pet_id, event_date);
