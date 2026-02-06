@@ -5,7 +5,7 @@ class Sidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelect;
 
-  Sidebar({
+  const Sidebar({
     super.key,
     required this.selectedIndex,
     required this.onSelect,
