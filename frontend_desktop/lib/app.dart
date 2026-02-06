@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'routes/app_router.dart';
+import 'routes/auth_gate.dart';
 import 'core/theme/app_theme.dart';
 
 class PetCareAdminApp extends StatelessWidget {
@@ -10,7 +10,7 @@ class PetCareAdminApp extends StatelessWidget {
     return MaterialApp(
       title: 'PetCare Admin',
       theme: AppTheme.light,
-      home: const AdminRouter(),
+      home: const AuthGate(),
       debugShowCheckedModeBanner: false,
     );
   }
