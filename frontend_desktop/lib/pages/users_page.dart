@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/widgets/UserFormDialog.dart';
-import '../core/widgets/centered_content.dart';
+import '../core/widgets/figma_widgets.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -11,229 +10,97 @@ class UsersPage extends StatefulWidget {
 
 class _UsersPageState extends State<UsersPage> {
   int? selectedIndex;
+  String search = '';
 
   final List<Map<String, String>> users = [
-    {
-      'name': 'Guts',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Tim',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Der Dünne',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'ChickSep',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Goofy A',
-      'email': 'FetterHund@gmail.com',
-      'address': 'Bruck, Hausweg 14',
-    },
+    {'name': 'Guts', 'email': '4332334523', 'address': 'Bruck, Hausweg 14'},
+    {'name': 'Tim', 'email': '4332334523', 'address': 'Bruck, Hausweg 14'},
+    {'name': 'Der Dünne', 'email': '4332334523', 'address': 'Bruck, Hausweg 14'},
+    {'name': 'ChickSep', 'email': '4332334523', 'address': 'Bruck, Hausweg 14'},
+    {'name': 'Goofy A', 'email': 'FetterHund@gmail.com', 'address': 'Bruck, Hausweg 14'},
   ];
 
-  Future<void> _createUser() async {
-    final result = await showDialog(
+  List<Map<String, String>> get filtered => search.isEmpty
+      ? users
+      : users.where((u) => u.values.any((v) => v.toLowerCase().contains(search.toLowerCase()))).toList();
+
+  Future<void> _showDialog({Map<String, String>? initial}) async {
+    final nameCtrl = TextEditingController(text: initial?['name']);
+    final emailCtrl = TextEditingController(text: initial?['email']);
+    final addressCtrl = TextEditingController(text: initial?['address']);
+
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (_) => const UserFormDialog(),
-    );
-
-    if (result != null) {
-      setState(() {
-        users.add(result);
-      });
-    }
-  }
-
-  Future<void> _editUser() async {
-    if (selectedIndex == null) return;
-
-    final result = await showDialog(
-      context: context,
-      builder: (_) => UserFormDialog(
-        initialData: users[selectedIndex!],
+      builder: (_) => FigmaDialog(
+        title: initial == null ? 'Benutzer anlegen' : 'Benutzer bearbeiten',
+        confirmLabel: initial == null ? 'Anlegen' : 'Speichern',
+        fields: [
+          FigmaField(label: 'Name', ctrl: nameCtrl),
+          FigmaField(label: 'Email / Telefon', ctrl: emailCtrl),
+          FigmaField(label: 'Adresse', ctrl: addressCtrl),
+        ],
+        onConfirm: () => Navigator.pop(context, {
+          'name': nameCtrl.text, 'email': emailCtrl.text, 'address': addressCtrl.text,
+        }),
       ),
     );
 
     if (result != null) {
       setState(() {
-        users[selectedIndex!] = result;
+        if (initial != null && selectedIndex != null) {
+          users[selectedIndex!] = result;
+        } else {
+          users.add(result);
+        }
+        selectedIndex = null;
       });
     }
   }
 
-  void _deleteUser() {
+  void _delete() {
     if (selectedIndex == null) return;
-
-    setState(() {
-      users.removeAt(selectedIndex!);
-      selectedIndex = null;
-    });
+    setState(() { users.removeAt(selectedIndex!); selectedIndex = null; });
   }
 
   @override
   Widget build(BuildContext context) {
-    return CenteredContent(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+    final rows = List.generate(filtered.length, (i) {
+      final u = filtered[i];
+      final gi = users.indexOf(u);
+      return DataRow(
+        selected: selectedIndex == gi,
+        onSelectChanged: (_) => setState(() => selectedIndex = selectedIndex == gi ? null : gi),
+        cells: [
+          DataCell(Text(u['name']!)),
+          DataCell(Text(u['email']!)),
+          DataCell(Text(u['address']!)),
+        ],
+      );
+    });
 
-            /// Titel
-            const Text(
-              'Benutzer',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// Suche + Anlegen (nebeneinander)
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Suchen',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide.none,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _createUser,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Benutzer anlegen'),
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: Colors.grey.shade200,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Tabelle + Footer
-            Expanded(
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  side: BorderSide(color: Colors.grey.shade500),
-                ),
-                child: Column(
-                  children: [
-                    /// Tabelle
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: DataTable(
-                            headingRowColor: MaterialStateProperty.all(
-                              Colors.grey.shade300,
-                            ),
-                            columnSpacing: 32,
-                            columns: const [
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Email/Tel.')),
-                              DataColumn(label: Text('Adresse')),
-                            ],
-                            rows: List.generate(users.length, (i) {
-                              final user = users[i];
-                              return DataRow(
-                                selected: selectedIndex == i,
-                                onSelectChanged: (_) {
-                                  setState(() {
-                                    selectedIndex =
-                                    selectedIndex == i ? null : i;
-                                  });
-                                },
-                                cells: [
-                                  DataCell(Text(user['name']!)),
-                                  DataCell(Text(user['email']!)),
-                                  DataCell(Text(user['address']!)),
-                                ],
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    /// Footer – LINKS wie im Figma
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.grey.shade400),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _editUser,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Bearbeiten'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _deleteUser,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Löschen'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    return FigmaPage(
+      title: 'Benutzer',
+      toolbarItems: [
+        FigmaSearchField(hint: 'Suchen', onChanged: (v) => setState(() => search = v)),
+        const SizedBox(width: 10),
+        FigmaButton(label: 'Benutzer anlegen', icon: Icons.add, onPressed: () => _showDialog()),
+      ],
+      content: FigmaTableCard(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Email/Tel.')),
+          DataColumn(label: Text('Adresse')),
+        ],
+        rows: rows,
+        footerActions: [
+          FigmaButton(
+            label: 'Bearbeiten',
+            enabled: selectedIndex != null,
+            onPressed: () => _showDialog(initial: users[selectedIndex!]),
+          ),
+          const SizedBox(width: 10),
+          FigmaButton(label: 'Löschen', enabled: selectedIndex != null, onPressed: _delete),
+        ],
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/widgets/centered_content.dart';
+import '../core/widgets/figma_widgets.dart';
 
 class PetsPage extends StatefulWidget {
   const PetsPage({super.key});
@@ -10,208 +10,101 @@ class PetsPage extends StatefulWidget {
 
 class _PetsPageState extends State<PetsPage> {
   int? selectedIndex;
+  String search = '';
 
   final List<Map<String, String>> pets = [
-    {
-      'name': 'Fabian',
-      'owner': 'BrisenSep',
-      'breed': 'Dünner',
-      'birth': '15.03.2007',
-    },
-    {
-      'name': 'Guts',
-      'owner': 'BrisenSep',
-      'breed': 'Dünner',
-      'birth': '15.03.2007',
-    },
-    {
-      'name': 'Fabian',
-      'owner': 'BrisenSep',
-      'breed': 'Dünner',
-      'birth': '15.03.2007',
-    },
-    {
-      'name': 'Fabian',
-      'owner': 'BrisenSep',
-      'breed': 'Dünner',
-      'birth': '15.03.2007',
-    },
+    {'name': 'Fabian', 'owner': 'BrisenSep', 'breed': 'Dünner', 'birth': '15.03.2007'},
+    {'name': 'Guts', 'owner': 'BrisenSep', 'breed': 'Dünner', 'birth': '15.03.2007'},
+    {'name': 'Luna', 'owner': 'Anna S.', 'breed': 'Husky', 'birth': '11.11.2020'},
+    {'name': 'Bello', 'owner': 'ChickSep', 'breed': 'Labrador', 'birth': '01.04.2022'},
   ];
 
-  void _createPet() {
-    debugPrint('Tier anlegen');
+  List<Map<String, String>> get filtered => search.isEmpty
+      ? pets
+      : pets.where((p) => p.values.any((v) => v.toLowerCase().contains(search.toLowerCase()))).toList();
+
+  Future<void> _showDialog({Map<String, String>? initial}) async {
+    final nameCtrl = TextEditingController(text: initial?['name']);
+    final ownerCtrl = TextEditingController(text: initial?['owner']);
+    final breedCtrl = TextEditingController(text: initial?['breed']);
+    final birthCtrl = TextEditingController(text: initial?['birth']);
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => FigmaDialog(
+        title: initial == null ? 'Tier anlegen' : 'Tier bearbeiten',
+        confirmLabel: initial == null ? 'Anlegen' : 'Speichern',
+        fields: [
+          FigmaField(label: 'Name', ctrl: nameCtrl),
+          FigmaField(label: 'Besitzer', ctrl: ownerCtrl),
+          FigmaField(label: 'Rasse', ctrl: breedCtrl),
+          FigmaField(label: 'Geburtsdatum', ctrl: birthCtrl),
+        ],
+        onConfirm: () => Navigator.pop(context, {
+          'name': nameCtrl.text, 'owner': ownerCtrl.text,
+          'breed': breedCtrl.text, 'birth': birthCtrl.text,
+        }),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        if (initial != null && selectedIndex != null) {
+          pets[selectedIndex!] = result;
+        } else {
+          pets.add(result);
+        }
+        selectedIndex = null;
+      });
+    }
   }
 
-  void _editPet() {
+  void _delete() {
     if (selectedIndex == null) return;
-    debugPrint('Tier bearbeiten: ${pets[selectedIndex!]['name']}');
-  }
-
-  void _deletePet() {
-    if (selectedIndex == null) return;
-    setState(() {
-      pets.removeAt(selectedIndex!);
-      selectedIndex = null;
-    });
+    setState(() { pets.removeAt(selectedIndex!); selectedIndex = null; });
   }
 
   @override
   Widget build(BuildContext context) {
-    return CenteredContent(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+    final rows = List.generate(filtered.length, (i) {
+      final p = filtered[i];
+      final gi = pets.indexOf(p);
+      return DataRow(
+        selected: selectedIndex == gi,
+        onSelectChanged: (_) => setState(() => selectedIndex = selectedIndex == gi ? null : gi),
+        cells: [
+          DataCell(Text(p['name']!)),
+          DataCell(Text(p['owner']!)),
+          DataCell(Text(p['breed']!)),
+          DataCell(Text(p['birth']!)),
+        ],
+      );
+    });
 
-            /// Titel
-            const Text(
-              'Tiere',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// Suche + Tier hinzufügen (figma-getreu)
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Suchen',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade300,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide.none,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _createPet,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tier hinzufügen'),
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Tabelle + Footer
-            Expanded(
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  side: BorderSide(color: Colors.grey.shade600),
-                ),
-                child: Column(
-                  children: [
-                    /// Tabelle
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: DataTable(
-                            headingRowColor: MaterialStateProperty.all(
-                              Colors.grey.shade300,
-                            ),
-                            columnSpacing: 28,
-                            columns: const [
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Besitzer')),
-                              DataColumn(label: Text('Rasse')),
-                              DataColumn(label: Text('Geburtsdatum')),
-                            ],
-                            rows: List.generate(pets.length, (i) {
-                              final pet = pets[i];
-                              return DataRow(
-                                selected: selectedIndex == i,
-                                onSelectChanged: (_) {
-                                  setState(() {
-                                    selectedIndex =
-                                    selectedIndex == i ? null : i;
-                                  });
-                                },
-                                cells: [
-                                  DataCell(Text(pet['name']!)),
-                                  DataCell(Text(pet['owner']!)),
-                                  DataCell(Text(pet['breed']!)),
-                                  DataCell(Text(pet['birth']!)),
-                                ],
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    /// Footer – LINKS wie im Figma
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.grey.shade500),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _editPet,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Bearbeiten'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _deletePet,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Löschen'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    return FigmaPage(
+      title: 'Tiere',
+      toolbarItems: [
+        FigmaSearchField(hint: 'Suchen', onChanged: (v) => setState(() => search = v)),
+        const SizedBox(width: 10),
+        FigmaButton(label: 'Tier hinzufügen', icon: Icons.add, onPressed: () => _showDialog()),
+      ],
+      content: FigmaTableCard(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Besitzer')),
+          DataColumn(label: Text('Rasse')),
+          DataColumn(label: Text('Geburtsdatum')),
+        ],
+        rows: rows,
+        footerActions: [
+          FigmaButton(
+            label: 'Bearbeiten',
+            enabled: selectedIndex != null,
+            onPressed: () => _showDialog(initial: pets[selectedIndex!]),
+          ),
+          const SizedBox(width: 10),
+          FigmaButton(label: 'Löschen', enabled: selectedIndex != null, onPressed: _delete),
+        ],
       ),
     );
   }

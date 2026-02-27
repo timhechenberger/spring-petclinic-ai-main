@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/widgets/centered_content.dart';
+import '../core/widgets/figma_widgets.dart';
 
 class VisitsPage extends StatefulWidget {
   const VisitsPage({super.key});
@@ -17,336 +17,263 @@ class _VisitsPageState extends State<VisitsPage> {
       {'title': 'Termin 1', 'desc': 'Hund verarzten'},
       {'title': 'Termin 2', 'desc': 'Katze impfen'},
     ],
-    DateTime(2024, 4, 18): [
-      {'title': 'Operation', 'desc': 'Den Dünnen meucheln'},
-    ],
-    DateTime(2024, 4, 22): [
-      {'title': 'Kontrolle', 'desc': 'Hase checken'},
-    ],
+    DateTime(2024, 4, 18): [{'title': 'Operation', 'desc': 'Kastration – Bello'}],
+    DateTime(2024, 4, 22): [{'title': 'Kontrolle', 'desc': 'Hase checken'}],
   };
 
-  List<Map<String, String>> get dayVisits =>
-      visits[_dayKey(selectedDate)] ?? [];
-
   DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
+  List<Map<String, String>> get dayVisits => visits[_dayKey(selectedDate)] ?? [];
 
-  Future<void> _createVisit() async {
-    final result = await showDialog(
+  bool _hasVisits(DateTime d) =>
+      visits[_dayKey(d)]?.isNotEmpty ?? false;
+
+  Future<void> _showDialog({Map<String, String>? initial}) async {
+    final titleCtrl = TextEditingController(text: initial?['title']);
+    final descCtrl  = TextEditingController(text: initial?['desc']);
+
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (_) => const _VisitFormDialog(),
-    );
-
-    if (result != null) {
-      setState(() {
-        visits.putIfAbsent(_dayKey(selectedDate), () => []);
-        visits[_dayKey(selectedDate)]!.add(result);
-      });
-    }
-  }
-
-  Future<void> _editVisit() async {
-    if (selectedVisitIndex == null) return;
-
-    final result = await showDialog(
-      context: context,
-      builder: (_) => _VisitFormDialog(
-        initialData: dayVisits[selectedVisitIndex!],
+      builder: (_) => FigmaDialog(
+        title: initial == null ? 'Termin anlegen' : 'Termin bearbeiten',
+        confirmLabel: initial == null ? 'Anlegen' : 'Speichern',
+        fields: [
+          FigmaField(label: 'Titel', ctrl: titleCtrl),
+          FigmaField(label: 'Beschreibung', ctrl: descCtrl),
+        ],
+        onConfirm: () => Navigator.pop(context, {
+          'title': titleCtrl.text,
+          'desc':  descCtrl.text,
+        }),
       ),
     );
 
     if (result != null) {
       setState(() {
-        dayVisits[selectedVisitIndex!] = result;
+        visits.putIfAbsent(_dayKey(selectedDate), () => []);
+        if (initial != null && selectedVisitIndex != null) {
+          visits[_dayKey(selectedDate)]![selectedVisitIndex!] = result;
+        } else {
+          visits[_dayKey(selectedDate)]!.add(result);
+        }
         selectedVisitIndex = null;
       });
     }
   }
 
-  void _deleteVisit() {
+  void _delete() {
     if (selectedVisitIndex == null) return;
-
     setState(() {
       dayVisits.removeAt(selectedVisitIndex!);
       selectedVisitIndex = null;
     });
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+        selectedVisitIndex = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return CenteredContent(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1000),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            const Text(
-              'Termine',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Title + toolbar ──────────────────────────────────
+          const Text('Termine',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
 
-            /// Header
-            Row(
-              children: [
-                SizedBox(
-                  width: 220,
-                  height: 40,
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          selectedDate = picked;
-                          selectedVisitIndex = null;
-                        });
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        prefixIcon:
-                        const Icon(Icons.calendar_today, size: 18),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        isDense: true,
-                      ),
-                      child: Text(
+          Row(
+            children: [
+              // Date display (read-only, click to pick)
+              GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade400),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today,
+                          size: 15, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Text(
                         '${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
+                        style: const TextStyle(fontSize: 13),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _createVisit,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Termin anlegen'),
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.black,
+              ),
+              const SizedBox(width: 10),
+              FigmaButton(
+                label: 'Termin anlegen',
+                icon: Icons.add,
+                onPressed: () => _showDialog(),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Calendar + Visit list ────────────────────────────
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Calendar (55 % width)
+                Expanded(
+                  flex: 55,
+                  child: _MonthCalendar(
+                    selectedDate: selectedDate,
+                    hasVisits: _hasVisits,
+                    onSelect: (d) => setState(() {
+                      selectedDate = d;
+                      selectedVisitIndex = null;
+                    }),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Visit list (45 % width)
+                Expanded(
+                  flex: 45,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                          decoration: BoxDecoration(
+                            border: Border(
+                                bottom: BorderSide(color: Colors.grey.shade300)),
+                          ),
+                          child: Text(
+                            'Termine am ${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                        ),
+
+                        // List
+                        Expanded(
+                          child: dayVisits.isEmpty
+                              ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.event_note,
+                                    size: 32,
+                                    color: Colors.grey.shade300),
+                                const SizedBox(height: 6),
+                                Text('Keine Termine',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade400)),
+                              ],
+                            ),
+                          )
+                              : ListView.builder(
+                            padding: const EdgeInsets.all(10),
+                            itemCount: dayVisits.length,
+                            itemBuilder: (_, i) {
+                              final v = dayVisits[i];
+                              final sel = selectedVisitIndex == i;
+                              return GestureDetector(
+                                onTap: () => setState(() =>
+                                selectedVisitIndex =
+                                sel ? null : i),
+                                child: Container(
+                                  margin:
+                                  const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: sel
+                                        ? Colors.grey.shade200
+                                        : Colors.grey.shade50,
+                                    borderRadius:
+                                    BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: sel
+                                          ? Colors.grey.shade500
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(v['title']!,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13)),
+                                      const SizedBox(height: 2),
+                                      Text(v['desc']!,
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black54)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Footer buttons
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                          decoration: BoxDecoration(
+                            border: Border(
+                                top: BorderSide(color: Colors.grey.shade300)),
+                          ),
+                          child: Row(
+                            children: [
+                              FigmaButton(
+                                label: 'Bearbeiten',
+                                enabled: selectedVisitIndex != null,
+                                onPressed: () => _showDialog(
+                                    initial: dayVisits[selectedVisitIndex!]),
+                              ),
+                              const SizedBox(width: 10),
+                              FigmaButton(
+                                label: 'Löschen',
+                                enabled: selectedVisitIndex != null,
+                                onPressed: _delete,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Content
-            Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _Calendar(
-                      selectedDate: selectedDate,
-                      onSelect: (d) {
-                        setState(() {
-                          selectedDate = d;
-                          selectedVisitIndex = null;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                        side: BorderSide(color: Colors.grey.shade500),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: Text(
-                              'Termine am ausgewählten Tag',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: dayVisits.length,
-                              itemBuilder: (_, i) {
-                                final v = dayVisits[i];
-                                final selected = selectedVisitIndex == i;
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedVisitIndex =
-                                      selected ? null : i;
-                                    });
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.all(8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: selected
-                                          ? Colors.grey.shade300
-                                          : null,
-                                      border: Border.all(
-                                          color: Colors.grey.shade400),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        Text(v['title']!,
-                                            style: const TextStyle(
-                                                fontWeight:
-                                                FontWeight.w600)),
-                                        const SizedBox(height: 4),
-                                        Text(v['desc']!),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: selectedVisitIndex == null
-                                      ? null
-                                      : _editVisit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                    Colors.grey.shade300,
-                                    foregroundColor: Colors.black,
-                                    elevation: 0,
-                                  ),
-                                  child: const Text('Bearbeiten'),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton(
-                                  onPressed: selectedVisitIndex == null
-                                      ? null
-                                      : _deleteVisit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                    Colors.grey.shade300,
-                                    foregroundColor: Colors.black,
-                                    elevation: 0,
-                                  ),
-                                  child: const Text('Löschen'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ---------------- VISIT FORM DIALOG ----------------
-
-class _VisitFormDialog extends StatefulWidget {
-  final Map<String, String>? initialData;
-
-  const _VisitFormDialog({this.initialData});
-
-  @override
-  State<_VisitFormDialog> createState() => _VisitFormDialogState();
-}
-
-class _VisitFormDialogState extends State<_VisitFormDialog> {
-  late TextEditingController titleCtrl;
-  late TextEditingController descCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    titleCtrl =
-        TextEditingController(text: widget.initialData?['title'] ?? '');
-    descCtrl =
-        TextEditingController(text: widget.initialData?['desc'] ?? '');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEdit = widget.initialData != null;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      child: SizedBox(
-        width: 400,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Termin bearbeiten' : 'Termin anlegen',
-                style:
-                const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 20),
-              _field('Titel', titleCtrl),
-              _field('Beschreibung', descCtrl),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'title': titleCtrl.text,
-                        'desc': descCtrl.text,
-                      });
-                    },
-                    child: Text(isEdit ? 'Speichern' : 'Anlegen'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _field(String label, TextEditingController ctrl) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label),
-          const SizedBox(height: 4),
-          TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              isDense: true,
-              border: OutlineInputBorder(),
             ),
           ),
         ],
@@ -355,68 +282,166 @@ class _VisitFormDialogState extends State<_VisitFormDialog> {
   }
 }
 
-/// ---------------- CALENDAR ----------------
+// ── Month calendar widget ──────────────────────────────────────────────────────
 
-class _Calendar extends StatelessWidget {
+class _MonthCalendar extends StatelessWidget {
   final DateTime selectedDate;
+  final bool Function(DateTime) hasVisits;
   final ValueChanged<DateTime> onSelect;
 
-  const _Calendar({required this.selectedDate, required this.onSelect});
+  const _MonthCalendar({
+    required this.selectedDate,
+    required this.hasVisits,
+    required this.onSelect,
+  });
+
+  static const _weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  String _monthName(int m) => const [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+  ][m - 1];
 
   @override
   Widget build(BuildContext context) {
-    final daysInMonth =
-    DateUtils.getDaysInMonth(selectedDate.year, selectedDate.month);
+    final year  = selectedDate.year;
+    final month = selectedDate.month;
+    final daysInMonth = DateUtils.getDaysInMonth(year, month);
+    // weekday of first day: Mon=1..Sun=7 → shift to Sun=0
+    final firstWeekday = DateTime(year, month, 1).weekday % 7;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        side: BorderSide(color: Colors.grey.shade500),
+        border: Border.all(color: Colors.grey.shade400),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                .map((e) => Text(e))
-                .toList(),
-          ),
-          const Divider(),
-          Expanded(
-            child: GridView.builder(
-              itemCount: daysInMonth,
-              gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-              ),
-              itemBuilder: (_, i) {
-                final day = i + 1;
-                final date = DateTime(
-                    selectedDate.year, selectedDate.month, day);
-                final isSelected =
-                DateUtils.isSameDay(date, selectedDate);
-
-                return InkWell(
-                  onTap: () => onSelect(date),
-                  child: Container(
-                    margin: const EdgeInsets.all(4),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.grey.shade300
-                          : null,
-                      border: Border.all(
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                    child: Text('$day'),
-                  ),
-                );
-              },
+          // Month navigation header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, size: 20),
+                  onPressed: () => onSelect(
+                      DateTime(year, month - 1, 1)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const Spacer(),
+                Text(
+                  '${_monthName(month)} $year',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, size: 20),
+                  onPressed: () => onSelect(
+                      DateTime(year, month + 1, 1)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
           ),
+
+          // Weekday header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: _weekdays
+                  .map((d) => Expanded(
+                child: Center(
+                  child: Text(d,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black45)),
+                ),
+              ))
+                  .toList(),
+            ),
+          ),
+
+          Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              color: Colors.grey.shade200),
+
+          // Day grid
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7),
+                itemCount: firstWeekday + daysInMonth,
+                itemBuilder: (_, i) {
+                  if (i < firstWeekday) return const SizedBox.shrink();
+
+                  final day  = i - firstWeekday + 1;
+                  final date = DateTime(year, month, day);
+                  final isSel =
+                  DateUtils.isSameDay(date, selectedDate);
+                  final isToday =
+                  DateUtils.isSameDay(date, DateTime.now());
+                  final hasDot = hasVisits(date);
+
+                  return GestureDetector(
+                    onTap: () => onSelect(date),
+                    child: Container(
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isSel ? Colors.grey.shade300 : null,
+                        border: Border.all(
+                          color: isToday
+                              ? const Color(0xFF3F7F46)
+                              : Colors.grey.shade300,
+                          width: isToday ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            '$day',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isToday
+                                  ? const Color(0xFF3F7F46)
+                                  : Colors.black87,
+                              fontWeight: isSel || isToday
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          if (hasDot)
+                            Positioned(
+                              bottom: 4,
+                              child: Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(
+                                  color: Colors.orange,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
         ],
       ),
     );

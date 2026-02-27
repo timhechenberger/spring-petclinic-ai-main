@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/widgets/centered_content.dart';
+import '../core/widgets/figma_widgets.dart';
 
 class VetsPage extends StatefulWidget {
   const VetsPage({super.key});
@@ -10,63 +10,60 @@ class VetsPage extends StatefulWidget {
 
 class _VetsPageState extends State<VetsPage> {
   int? selectedIndex;
+  String search = '';
 
   final List<Map<String, String>> vets = [
-    {
-      'name': 'Dr. Max Mustermann',
-      'specialty': 'Chirurgie',
-    },
-    {
-      'name': 'Dr. Anna Beispiel',
-      'specialty': 'Dermatologie',
-    },
-    {
-      'name': 'Dr. Paul Test',
-      'specialty': 'Innere Medizin',
-    },
-    {
-      'name': 'Dr. Julia Weiß',
-      'specialty': 'Zahnheilkunde',
-    },
-    {
-      'name': 'Dr. Lukas Grün',
-      'specialty': 'Radiologie',
-    },
-    {
-      'name': 'Dr. Eva Schwarz',
-      'specialty': 'Chirurgie',
-    },
+    {'firstname': 'Max', 'lastname': 'Mustermann', 'age': '42', 'specialty': 'Chirurgie'},
+    {'firstname': 'Anna', 'lastname': 'Beispiel', 'age': '36', 'specialty': 'Dermatologie'},
+    {'firstname': 'Paul', 'lastname': 'Test', 'age': '51', 'specialty': 'Innere Medizin'},
+    {'firstname': 'Julia', 'lastname': 'Weiß', 'age': '38', 'specialty': 'Zahnheilkunde'},
+    {'firstname': 'Lukas', 'lastname': 'Grün', 'age': '44', 'specialty': 'Radiologie'},
+    {'firstname': 'Eva', 'lastname': 'Schwarz', 'age': '39', 'specialty': 'Chirurgie'},
   ];
 
-  Future<void> _createVet() async {
-    final result = await showDialog(
+  List<Map<String, String>> get filtered => search.isEmpty
+      ? vets
+      : vets.where((v) => v.values.any((val) => val.toLowerCase().contains(search.toLowerCase()))).toList();
+
+  Future<void> _showDialog({Map<String, String>? initial}) async {
+    final firstCtrl  = TextEditingController(text: initial?['firstname']);
+    final lastCtrl   = TextEditingController(text: initial?['lastname']);
+    final ageCtrl    = TextEditingController(text: initial?['age']);
+    final specCtrl   = TextEditingController(text: initial?['specialty']);
+
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (_) => const _VetFormDialog(),
-    );
-
-    if (result != null) {
-      setState(() => vets.add(result));
-    }
-  }
-
-  Future<void> _editVet() async {
-    if (selectedIndex == null) return;
-
-    final result = await showDialog(
-      context: context,
-      builder: (_) =>
-          _VetFormDialog(initialData: vets[selectedIndex!]),
+      builder: (_) => FigmaDialog(
+        title: initial == null ? 'Tierarzt anlegen' : 'Tierarzt bearbeiten',
+        confirmLabel: initial == null ? 'Anlegen' : 'Speichern',
+        fields: [
+          FigmaField(label: 'Vorname', ctrl: firstCtrl),
+          FigmaField(label: 'Nachname', ctrl: lastCtrl),
+          FigmaField(label: 'Alter', ctrl: ageCtrl),
+          FigmaField(label: 'Spezialisierung', ctrl: specCtrl),
+        ],
+        onConfirm: () => Navigator.pop(context, {
+          'firstname': firstCtrl.text,
+          'lastname':  lastCtrl.text,
+          'age':       ageCtrl.text,
+          'specialty': specCtrl.text,
+        }),
+      ),
     );
 
     if (result != null) {
       setState(() {
-        vets[selectedIndex!] = result;
+        if (initial != null && selectedIndex != null) {
+          vets[selectedIndex!] = result;
+        } else {
+          vets.add(result);
+        }
         selectedIndex = null;
       });
     }
   }
 
-  void _deleteVet() {
+  void _delete() {
     if (selectedIndex == null) return;
     setState(() {
       vets.removeAt(selectedIndex!);
@@ -76,245 +73,152 @@ class _VetsPageState extends State<VetsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return CenteredContent(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1000),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+    final items = filtered;
 
-            const Text(
-              'Tierärzte',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// Suche + Anlegen
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Tierarzt suchen...',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade300,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide.none,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _createVet,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tierarzt anlegen'),
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.black,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            /// Grid
-            Expanded(
-              child: GridView.builder(
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 24,
-                  mainAxisSpacing: 24,
-                  childAspectRatio: 1.4,
-                ),
-                itemCount: vets.length,
-                itemBuilder: (_, i) {
-                  final vet = vets[i];
-                  final selected = selectedIndex == i;
-
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        selectedIndex = selected ? null : i;
-                      });
-                    },
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: selected
-                              ? Colors.black
-                              : Colors.grey.shade400,
-                          width: selected ? 2 : 1,
-                        ),
-                      ),
-                      color: Colors.grey.shade100,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.medical_services, size: 28),
-                            const SizedBox(height: 12),
-                            Text(
-                              vet['name']!,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              vet['specialty']!,
-                              style: TextStyle(
-                                  color: Colors.grey.shade600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            /// Footer Buttons – links wie Figma
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed:
-                  selectedIndex == null ? null : _editVet,
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: const Text('Bearbeiten'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed:
-                  selectedIndex == null ? null : _deleteVet,
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: const Text('Löschen'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-          ],
+    return FigmaPage(
+      title: 'Tierärzte',
+      toolbarItems: [
+        FigmaSearchField(
+          hint: 'Suchen',
+          onChanged: (v) => setState(() => search = v),
         ),
-      ),
-    );
-  }
-}
-
-/// ---------------- VET FORM DIALOG ----------------
-
-class _VetFormDialog extends StatefulWidget {
-  final Map<String, String>? initialData;
-
-  const _VetFormDialog({this.initialData});
-
-  @override
-  State<_VetFormDialog> createState() => _VetFormDialogState();
-}
-
-class _VetFormDialogState extends State<_VetFormDialog> {
-  late TextEditingController nameCtrl;
-  late TextEditingController specialtyCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    nameCtrl =
-        TextEditingController(text: widget.initialData?['name'] ?? '');
-    specialtyCtrl =
-        TextEditingController(text: widget.initialData?['specialty'] ?? '');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEdit = widget.initialData != null;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      child: SizedBox(
-        width: 400,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Tierarzt bearbeiten' : 'Tierarzt anlegen',
-                style:
-                const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        const SizedBox(width: 10),
+        FigmaButton(
+          label: 'Tierarzt anlegen',
+          icon: Icons.add,
+          onPressed: () => _showDialog(),
+        ),
+      ],
+      content: Column(
+        children: [
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 2.2,
               ),
-              const SizedBox(height: 20),
-              _field('Name', nameCtrl),
-              _field('Spezialisierung', specialtyCtrl),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen'),
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final vet = items[i];
+                final globalIdx = vets.indexOf(vet);
+                final selected = selectedIndex == globalIdx;
+
+                return GestureDetector(
+                  onTap: () => setState(() =>
+                  selectedIndex = selected ? null : globalIdx),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFFD6EAD8)
+                          : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFF3F7F46)
+                            : Colors.grey.shade400,
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header row – Firstname / Lastname / Age
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(3),
+                              topRight: Radius.circular(3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              _HeaderCell(vet['firstname']!),
+                              const SizedBox(width: 8),
+                              _HeaderCell(vet['lastname']!),
+                              const SizedBox(width: 8),
+                              _HeaderCell('${vet['age']} J.'),
+                            ],
+                          ),
+                        ),
+
+                        // Specialty body
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Spezialisierungen',
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.black45),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Text(
+                                    vet['specialty']!,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'name': nameCtrl.text,
-                        'specialty': specialtyCtrl.text,
-                      });
-                    },
-                    child: Text(isEdit ? 'Speichern' : 'Anlegen'),
-                  ),
-                ],
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Row(
+            children: [
+              FigmaButton(
+                label: 'Bearbeiten',
+                enabled: selectedIndex != null,
+                onPressed: () => _showDialog(initial: vets[selectedIndex!]),
+              ),
+              const SizedBox(width: 10),
+              FigmaButton(
+                label: 'Löschen',
+                enabled: selectedIndex != null,
+                onPressed: _delete,
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 4),
+        ],
       ),
     );
   }
+}
 
-  Widget _field(String label, TextEditingController ctrl) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label),
-          const SizedBox(height: 4),
-          TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
+class _HeaderCell extends StatelessWidget {
+  final String text;
+  const _HeaderCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: Colors.black87,
       ),
     );
   }
