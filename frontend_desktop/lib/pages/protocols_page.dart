@@ -1,67 +1,58 @@
 import 'package:flutter/material.dart';
+import '../core/api/petclinic_api.dart';
 import '../core/widgets/figma_widgets.dart';
 
 class ProtocolsPage extends StatefulWidget {
   const ProtocolsPage({super.key});
-
   @override
   State<ProtocolsPage> createState() => _ProtocolsPageState();
 }
 
 class _ProtocolsPageState extends State<ProtocolsPage> {
-  String filter = 'Alle';
-  String search = '';
+  List<Visit> _visits = [];
+  List<Pet> _pets = [];
+  bool _loading = true;
+  String? _error;
+  String _search = '';
 
-  final List<Map<String, String>> protocols = [
-    {'date': '10.10.2025 14:32', 'user': 'Dr. Müller', 'action': 'Termin erstellt', 'object': 'Max (Hund)', 'status': 'Kritisch', 'type': 'Termin'},
-    {'date': '21.04.2024 09:12', 'user': 'admin', 'action': 'Erstellt', 'object': 'Bello – Impfung', 'status': 'Gut', 'type': 'Termin'},
-    {'date': '21.04.2024 09:15', 'user': 'admin', 'action': 'Gelöscht', 'object': 'Tier: Luna', 'status': 'Abgeschlossen', 'type': 'Tier'},
-    {'date': '21.04.2024 10:01', 'user': 'admin', 'action': 'Bearbeitet', 'object': 'Benutzer: Max', 'status': 'In Behandlung', 'type': 'Benutzer'},
-  ];
+  @override
+  void initState() { super.initState(); _load(); }
 
-  List<Map<String, String>> get filtered => protocols.where((p) {
-    final matchFilter = filter == 'Alle' || p['type'] == filter;
-    final matchSearch = search.isEmpty || p.values.any((v) => v.toLowerCase().contains(search.toLowerCase()));
-    return matchFilter && matchSearch;
-  }).toList();
-
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'Kritisch': return Colors.red;
-      case 'In Behandlung': return Colors.orange;
-      case 'Abgeschlossen': return Colors.grey;
-      default: return Colors.green;
-    }
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final results = await Future.wait([
+        PetClinicApi.getVisits(),
+        PetClinicApi.getPets(),
+      ]);
+      _visits = results[0] as List<Visit>;
+      _pets   = results[1] as List<Pet>;
+    } catch (e) { _error = e.toString(); }
+    setState(() => _loading = false);
   }
+
+  String _petName(int? id) {
+    if (id == null) return '–';
+    final p = _pets.firstWhere((p) => p.id == id,
+        orElse: () => Pet(name: '?', birthDate: ''));
+    return p.name;
+  }
+
+  List<Visit> get _filtered => _search.isEmpty ? _visits
+      : _visits.where((v) =>
+      '${_petName(v.petId)} ${v.description} ${v.date}'
+          .toLowerCase().contains(_search.toLowerCase())).toList();
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _ErrorView(message: _error!, onRetry: _load);
+
+    final list = _filtered;
     return FigmaPage(
       title: 'Protokolle',
       toolbarItems: [
-        FigmaSearchField(hint: 'Suchen', onChanged: (v) => setState(() => search = v)),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 150,
-          height: 38,
-          child: DropdownButtonFormField<String>(
-            value: filter,
-            items: const [
-              DropdownMenuItem(value: 'Alle', child: Text('Alle', style: TextStyle(fontSize: 13))),
-              DropdownMenuItem(value: 'Termin', child: Text('Termine', style: TextStyle(fontSize: 13))),
-              DropdownMenuItem(value: 'Tier', child: Text('Tiere', style: TextStyle(fontSize: 13))),
-              DropdownMenuItem(value: 'Benutzer', child: Text('Benutzer', style: TextStyle(fontSize: 13))),
-            ],
-            onChanged: (v) => setState(() => filter = v!),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.grey.shade300,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            ),
-          ),
-        ),
+        FigmaSearchField(hint: 'Suchen', onChanged: (v) => setState(() => _search = v)),
       ],
       content: Container(
         decoration: BoxDecoration(
@@ -81,20 +72,13 @@ class _ProtocolsPageState extends State<ProtocolsPage> {
                 horizontalMargin: 16,
                 columns: const [
                   DataColumn(label: Text('Datum')),
-                  DataColumn(label: Text('Benutzer')),
-                  DataColumn(label: Text('Aktion')),
-                  DataColumn(label: Text('Objekt')),
-                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Tier')),
+                  DataColumn(label: Text('Beschreibung')),
                 ],
-                rows: filtered.map((p) => DataRow(cells: [
-                  DataCell(Text(p['date']!, style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(p['user']!)),
-                  DataCell(Text(p['action']!)),
-                  DataCell(Text(p['object']!)),
-                  DataCell(Text(
-                    p['status']!,
-                    style: TextStyle(fontWeight: FontWeight.w600, color: _statusColor(p['status']!), fontSize: 13),
-                  )),
+                rows: list.map((v) => DataRow(cells: [
+                  DataCell(Text(v.date, style: const TextStyle(fontSize: 12))),
+                  DataCell(Text(_petName(v.petId))),
+                  DataCell(Text(v.description)),
                 ])).toList(),
               ),
             ),
@@ -103,4 +87,24 @@ class _ProtocolsPageState extends State<ProtocolsPage> {
       ),
     );
   }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message; final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey.shade400),
+      const SizedBox(height: 12),
+      const Text('Verbindung fehlgeschlagen', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+      Text(message, style: const TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
+      const SizedBox(height: 16),
+      ElevatedButton.icon(onPressed: onRetry,
+          icon: const Icon(Icons.refresh, size: 16), label: const Text('Erneut versuchen'),
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3F7F46),
+              foregroundColor: Colors.white, elevation: 0)),
+    ]),
+  );
 }
