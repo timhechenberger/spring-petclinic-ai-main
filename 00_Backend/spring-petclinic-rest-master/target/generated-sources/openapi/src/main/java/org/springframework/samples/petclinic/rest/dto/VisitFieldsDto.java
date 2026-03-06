@@ -24,7 +24,7 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "VisitFields", description = "Editable fields of a vet visit.")
 @JsonTypeName("VisitFields")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-02-06T09:03:13.227724800+01:00[Europe/Vienna]", comments = "Generator version: 7.18.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-03-06T09:15:59.842962+01:00[Europe/Berlin]", comments = "Generator version: 7.18.0")
 public class VisitFieldsDto {
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
