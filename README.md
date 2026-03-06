@@ -11,7 +11,7 @@ Backend
 cd backend
 ./mvnw spring-boot:run
 
-→ http://localhost:8080
+→ http://localhost:9966/petclinic
 
 Frontend:
 cd frontend
