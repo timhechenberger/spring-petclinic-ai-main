@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../services/owner_session.dart';
+import '../../services/pet_service.dart';
+
 class AddAnimalPage extends StatefulWidget {
   const AddAnimalPage({super.key});
 
@@ -11,10 +14,25 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
   final _formKey = GlobalKey<FormState>();
 
   final nameCtrl = TextEditingController();
-  final typeCtrl = TextEditingController();
   final birthCtrl = TextEditingController();
 
   DateTime? birthDate;
+  bool isSaving = false;
+
+  // Achtung:
+  // Diese IDs müssen zu deinem Backend passen.
+  // Nach deinem Swagger/Response ist cat = 1 belegt.
+  // Die restlichen Werte musst du ggf. an deine vorhandenen Pet Types anpassen.
+  final List<_PetTypeOption> petTypes = const [
+    _PetTypeOption(id: 1, label: 'Katze', apiName: 'cat'),
+    _PetTypeOption(id: 2, label: 'Hund', apiName: 'dog'),
+    _PetTypeOption(id: 3, label: 'Eidechse', apiName: 'lizard'),
+    _PetTypeOption(id: 4, label: 'Schlange', apiName: 'snake'),
+    _PetTypeOption(id: 5, label: 'Vogel', apiName: 'bird'),
+    _PetTypeOption(id: 6, label: 'Hamster', apiName: 'hamster'),
+  ];
+
+  _PetTypeOption? selectedType;
 
   static const green = Color(0xFF3E7C46);
   static const greyBox = Color(0xFFD9D9D9);
@@ -34,9 +52,16 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    if (petTypes.isNotEmpty) {
+      selectedType = petTypes.first;
+    }
+  }
+
+  @override
   void dispose() {
     nameCtrl.dispose();
-    typeCtrl.dispose();
     birthCtrl.dispose();
     super.dispose();
   }
@@ -53,32 +78,64 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
       setState(() {
         birthDate = picked;
         birthCtrl.text =
-        "${picked.day.toString().padLeft(2, '0')}.${picked.month.toString().padLeft(2, '0')}.${picked.year}";
+        '${picked.day.toString().padLeft(2, '0')}.${picked.month.toString().padLeft(2, '0')}.${picked.year}';
       });
     }
   }
 
-  void _save() {
+  String _toIsoDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _save() async {
+    if (isSaving) return;
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
     if (birthDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bitte Geburtsdatum wählen")),
+        const SnackBar(content: Text('Bitte Geburtsdatum wählen')),
       );
       return;
     }
 
-    final newAnimal = {
-      "id": DateTime.now().millisecondsSinceEpoch,
-      "name": nameCtrl.text.trim(),
-      "type": typeCtrl.text.trim(),
-      "status": "OK",
-      "birthdate": birthCtrl.text.trim(),
-      "timeline": [
-        {"date": "Jetzt", "title": "Tier angelegt"}
-      ],
-    };
+    if (selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bitte Tierart wählen')),
+      );
+      return;
+    }
 
-    Navigator.pop(context, newAnimal);
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      await PetService.addPetToOwner(
+        ownerId: OwnerSession.ownerId,
+        name: nameCtrl.text.trim(),
+        birthDateIso: _toIsoDate(birthDate!),
+        typeId: selectedType!.id,
+        typeName: selectedType!.apiName,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tier konnte nicht angelegt werden: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
+    }
   }
 
   InputDecoration _inputDec() {
@@ -98,7 +155,7 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
     return Row(
       children: [
         IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: isSaving ? null : () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back),
         ),
       ],
@@ -121,7 +178,18 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
           children: [
             _backRow(),
             const SizedBox(height: 2),
-            const Text("Tier hinzufügen", style: titleStyle),
+            const Text('Tier hinzufügen', style: titleStyle),
+            const SizedBox(height: 12),
+
+            Text(
+              'Aktueller Owner: ${OwnerSession.ownerId}',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: green,
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             Center(
@@ -138,38 +206,65 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Name", style: labelStyle),
+                      const Text('Name', style: labelStyle),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: nameCtrl,
+                        enabled: !isSaving,
                         decoration: _inputDec(),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                         validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? "Pflichtfeld" : null,
+                        (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
                       ),
                       const SizedBox(height: 20),
 
-                      const Text("Art", style: labelStyle),
+                      const Text('Art', style: labelStyle),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: typeCtrl,
+                      DropdownButtonFormField<_PetTypeOption>(
+                        value: selectedType,
                         decoration: _inputDec(),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? "Pflichtfeld" : null,
+                        items: petTypes.map((type) {
+                          return DropdownMenuItem<_PetTypeOption>(
+                            value: type,
+                            child: Text(
+                              type.label,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: isSaving
+                            ? null
+                            : (value) {
+                          setState(() {
+                            selectedType = value;
+                          });
+                        },
+                        validator: (value) =>
+                        value == null ? 'Pflichtfeld' : null,
                       ),
                       const SizedBox(height: 20),
 
-                      const Text("Geburtsdatum", style: labelStyle),
+                      const Text('Geburtsdatum', style: labelStyle),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: birthCtrl,
                         readOnly: true,
+                        enabled: !isSaving,
                         onTap: _pickDate,
                         decoration: _inputDec().copyWith(
                           suffixIcon: const Icon(Icons.calendar_month),
                         ),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -184,7 +279,7 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
                 width: 260,
                 height: 44,
                 child: ElevatedButton(
-                  onPressed: _save,
+                  onPressed: isSaving ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: green,
                     foregroundColor: Colors.white,
@@ -194,9 +289,21 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  child: const Text(
-                    "Tier hinzufügen",
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  child: isSaving
+                      ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    'Tier hinzufügen',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -206,4 +313,16 @@ class _AddAnimalPageState extends State<AddAnimalPage> {
       ),
     );
   }
+}
+
+class _PetTypeOption {
+  final int id;
+  final String label;
+  final String apiName;
+
+  const _PetTypeOption({
+    required this.id,
+    required this.label,
+    required this.apiName,
+  });
 }

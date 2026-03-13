@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 
 @Schema(name = "ValidationMessage", description = "Messages describing a validation error.")
 @JsonTypeName("ValidationMessage")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-02-06T09:03:13.227724800+01:00[Europe/Vienna]", comments = "Generator version: 7.18.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-03-13T07:39:41.412254200+01:00[Europe/Vienna]", comments = "Generator version: 7.18.0")
 public class ValidationMessageDto {
 
   private String message;

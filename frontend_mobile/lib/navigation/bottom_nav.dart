@@ -5,7 +5,6 @@ import '../pages/appointments/appointments_page.dart';
 import '../pages/support/support_page.dart';
 import '../pages/profile/profile_page.dart';
 
-
 const _bgGreen = Color(0xFF579B5C);
 const _activeBlue = Color(0xFF232E64);
 const _inactiveWhite = Colors.white;
@@ -23,7 +22,7 @@ class BottomNavShell extends StatefulWidget {
 class _BottomNavShellState extends State<BottomNavShell> {
   int _index = 0;
 
-  final _pages = const [
+  final List<Widget> _pages = const [
     AnimalsPage(),
     AppointmentsPage(),
     SupportPage(),
@@ -32,16 +31,11 @@ class _BottomNavShellState extends State<BottomNavShell> {
 
   @override
   Widget build(BuildContext context) {
-    // IndexedStack (Tabs behalten ihren State)
-    // https://docs.flutter.dev/ui/widgets/basic/IndexedStack-class.html
     return Scaffold(
       body: IndexedStack(
         index: _index,
         children: _pages,
       ),
-
-      // BottomAppBar (freie Kontrolle über Höhe & Layout)
-      // https://docs.flutter.dev/ui/widgets/material/BottomAppBar-class.html
       bottomNavigationBar: BottomAppBar(
         color: _bgGreen,
         padding: EdgeInsets.zero,
@@ -109,14 +103,12 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? _activeBlue : _inactiveWhite;
 
-    // InkWell (Touch + Ripple)
-    // https://docs.flutter.dev/ui/widgets/material/InkWell-class.html
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 72),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // kein starres Padding mehr
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.max,
           children: [
             Icon(icon, size: 48, color: color),
