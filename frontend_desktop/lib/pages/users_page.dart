@@ -1,240 +1,140 @@
 import 'package:flutter/material.dart';
-import '../core/widgets/UserFormDialog.dart';
-import '../core/widgets/centered_content.dart';
+import '../core/api/petclinic_api.dart';
+import '../core/widgets/figma_widgets.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
-
   @override
   State<UsersPage> createState() => _UsersPageState();
 }
 
 class _UsersPageState extends State<UsersPage> {
-  int? selectedIndex;
+  List<Owner> _owners = [];
+  bool _loading = true;
+  String? _error;
+  int? _sel;
+  String _search = '';
 
-  final List<Map<String, String>> users = [
-    {
-      'name': 'Guts',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Tim',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Der Dünne',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'ChickSep',
-      'email': '4332334523',
-      'address': 'Bruck, Hausweg 14',
-    },
-    {
-      'name': 'Goofy A',
-      'email': 'FetterHund@gmail.com',
-      'address': 'Bruck, Hausweg 14',
-    },
-  ];
+  @override
+  void initState() { super.initState(); _load(); }
 
-  Future<void> _createUser() async {
-    final result = await showDialog(
-      context: context,
-      builder: (_) => const UserFormDialog(),
-    );
-
-    if (result != null) {
-      setState(() {
-        users.add(result);
-      });
-    }
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      _owners = await PetClinicApi.getOwners();
+    } catch (e) { _error = e.toString(); }
+    setState(() => _loading = false);
   }
 
-  Future<void> _editUser() async {
-    if (selectedIndex == null) return;
+  List<Owner> get _filtered => _search.isEmpty ? _owners
+      : _owners.where((o) => '${o.firstName} ${o.lastName} ${o.telephone} ${o.address}'
+      .toLowerCase().contains(_search.toLowerCase())).toList();
 
-    final result = await showDialog(
+  Future<void> _openDialog({Owner? initial}) async {
+    final f = TextEditingController(text: initial?.firstName);
+    final l = TextEditingController(text: initial?.lastName);
+    final t = TextEditingController(text: initial?.telephone);
+    final a = TextEditingController(text: initial?.address);
+    final c = TextEditingController(text: initial?.city);
+
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => UserFormDialog(
-        initialData: users[selectedIndex!],
+      builder: (_) => FigmaDialog(
+        title: initial == null ? 'Benutzer anlegen' : 'Benutzer bearbeiten',
+        confirmLabel: initial == null ? 'Anlegen' : 'Speichern',
+        fields: [
+          FigmaField(label: 'Vorname', ctrl: f),
+          FigmaField(label: 'Nachname', ctrl: l),
+          FigmaField(label: 'Telefon', ctrl: t),
+          FigmaField(label: 'Adresse', ctrl: a),
+          FigmaField(label: 'Stadt', ctrl: c),
+        ],
+        onConfirm: () => Navigator.pop(context, true),
       ),
     );
+    if (ok != true) return;
 
-    if (result != null) {
-      setState(() {
-        users[selectedIndex!] = result;
-      });
-    }
+    try {
+      final o = Owner(id: initial?.id, firstName: f.text, lastName: l.text,
+          telephone: t.text, address: a.text, city: c.text);
+      initial == null ? await PetClinicApi.createOwner(o) : await PetClinicApi.updateOwner(o);
+      setState(() => _sel = null);
+      await _load();
+    } catch (e) { _err(e); }
   }
 
-  void _deleteUser() {
-    if (selectedIndex == null) return;
-
-    setState(() {
-      users.removeAt(selectedIndex!);
-      selectedIndex = null;
-    });
+  Future<void> _delete() async {
+    if (_sel == null) return;
+    try {
+      await PetClinicApi.deleteOwner(_filtered[_sel!].id!);
+      setState(() => _sel = null);
+      await _load();
+    } catch (e) { _err(e); }
   }
+
+  void _err(Object e) => ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red.shade700));
 
   @override
   Widget build(BuildContext context) {
-    return CenteredContent(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _ErrorView(message: _error!, onRetry: _load);
 
-            /// Titel
-            const Text(
-              'Benutzer',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// Suche + Anlegen (nebeneinander)
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Suchen',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide.none,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 40,
-                  child: ElevatedButton.icon(
-                    onPressed: _createUser,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Benutzer anlegen'),
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: Colors.grey.shade200,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Tabelle + Footer
-            Expanded(
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  side: BorderSide(color: Colors.grey.shade500),
-                ),
-                child: Column(
-                  children: [
-                    /// Tabelle
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: DataTable(
-                            headingRowColor: MaterialStateProperty.all(
-                              Colors.grey.shade300,
-                            ),
-                            columnSpacing: 32,
-                            columns: const [
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Email/Tel.')),
-                              DataColumn(label: Text('Adresse')),
-                            ],
-                            rows: List.generate(users.length, (i) {
-                              final user = users[i];
-                              return DataRow(
-                                selected: selectedIndex == i,
-                                onSelectChanged: (_) {
-                                  setState(() {
-                                    selectedIndex =
-                                    selectedIndex == i ? null : i;
-                                  });
-                                },
-                                cells: [
-                                  DataCell(Text(user['name']!)),
-                                  DataCell(Text(user['email']!)),
-                                  DataCell(Text(user['address']!)),
-                                ],
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    /// Footer – LINKS wie im Figma
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.grey.shade400),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _editUser,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Bearbeiten'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            height: 34,
-                            child: ElevatedButton(
-                              onPressed:
-                              selectedIndex == null ? null : _deleteUser,
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: Colors.grey.shade300,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('Löschen'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    final list = _filtered;
+    return FigmaPage(
+      title: 'Benutzer',
+      toolbarItems: [
+        FigmaSearchField(hint: 'Suchen', onChanged: (v) => setState(() => _search = v)),
+        const SizedBox(width: 10),
+        FigmaButton(label: 'Benutzer anlegen', icon: Icons.add, onPressed: () => _openDialog()),
+      ],
+      content: FigmaTableCard(
+        columns: const [
+          DataColumn(label: Text('Name')),
+          DataColumn(label: Text('Telefon')),
+          DataColumn(label: Text('Adresse')),
+          DataColumn(label: Text('Tiere')),
+        ],
+        rows: List.generate(list.length, (i) {
+          final o = list[i];
+          return DataRow(
+            selected: _sel == i,
+            onSelectChanged: (_) => setState(() => _sel = _sel == i ? null : i),
+            cells: [
+              DataCell(Text('${o.firstName} ${o.lastName}')),
+              DataCell(Text(o.telephone)),
+              DataCell(Text('${o.address}, ${o.city}')),
+              DataCell(Text('${o.pets.length}')),
+            ],
+          );
+        }),
+        footerActions: [
+          FigmaButton(label: 'Bearbeiten', enabled: _sel != null,
+              onPressed: () => _openDialog(initial: list[_sel!])),
+          const SizedBox(width: 10),
+          FigmaButton(label: 'Löschen', enabled: _sel != null, onPressed: _delete),
+        ],
       ),
     );
   }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message; final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey.shade400),
+      const SizedBox(height: 12),
+      const Text('Verbindung fehlgeschlagen', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+      Text(message, style: const TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
+      const SizedBox(height: 16),
+      ElevatedButton.icon(onPressed: onRetry,
+          icon: const Icon(Icons.refresh, size: 16), label: const Text('Erneut versuchen'),
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3F7F46),
+              foregroundColor: Colors.white, elevation: 0)),
+    ]),
+  );
 }

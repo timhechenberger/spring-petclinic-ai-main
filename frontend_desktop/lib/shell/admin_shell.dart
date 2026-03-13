@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum SidebarMode {
-  login,
-  admin,
-}
+enum SidebarMode { login, admin }
 
 class AdminShell extends StatelessWidget {
   final int index;
@@ -37,103 +34,95 @@ class AdminShell extends StatelessWidget {
 
   Widget _buildSidebar() {
     return Container(
-      width: 240,
+      width: 220,
       color: const Color(0xFF3F7F46),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
+          // Brand header
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'ADMIN\nDashboard',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Navigation nur im Admin-Modus
-          if (isAdmin) ...[
-            _NavItem(
-              icon: Icons.dashboard,
-              label: 'Dashboard',
-              active: index == 0,
-              onTap: () => onSelect!(0),
-            ),
-            _NavItem(
-              icon: Icons.people,
-              label: 'Benutzer',
-              active: index == 1,
-              onTap: () => onSelect!(1),
-            ),
-            _NavItem(
-              icon: Icons.medical_services,
-              label: 'Tierärzte',
-              active: index == 4,
-              onTap: () => onSelect!(4),
-            ),
-            _NavItem(
-              icon: Icons.pets,
-              label: 'Tiere',
-              active: index == 2,
-              onTap: () => onSelect!(2),
-            ),
-            _NavItem(
-              icon: Icons.event,
-              label: 'Termine',
-              active: index == 3,
-              onTap: () => onSelect!(3),
-            ),
-            _NavItem(
-              icon: Icons.list_alt,
-              label: 'Protokolle',
-              active: index == 5,
-              onTap: () => onSelect!(5),
-            ),
-          ],
-
-          const Spacer(),
-
-          // 🐾 LOGO-BLOCK (zentriert & integriert)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
+                Text(
+                  'ADMIN',
+                  style: TextStyle(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Image.asset(
-                    'assets/images/petcare_logo.png',
-                    width: 110,
-                    fit: BoxFit.contain,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    height: 1,
                   ),
                 ),
-
-                const SizedBox(height: 12),
-
-                // 🚪 Logout UNTER dem Logo
-                if (isAdmin)
-                  TextButton.icon(
-                    onPressed: onLogout,
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    label: const Text(
-                      'Logout',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
                   ),
+                ),
               ],
             ),
           ),
 
+          const SizedBox(height: 24),
+
+          if (isAdmin) ...[
+            _NavItem(icon: Icons.dashboard, label: 'Dashboard', active: index == 0, onTap: () => onSelect!(0)),
+            _NavItem(icon: Icons.people, label: 'Benutzer', active: index == 1, onTap: () => onSelect!(1)),
+            _NavItem(icon: Icons.medical_services, label: 'Tierärzte', active: index == 4, onTap: () => onSelect!(4)),
+            _NavItem(icon: Icons.pets, label: 'Tiere', active: index == 2, onTap: () => onSelect!(2)),
+            _NavItem(icon: Icons.event, label: 'Termine', active: index == 3, onTap: () => onSelect!(3)),
+            _NavItem(icon: Icons.list_alt, label: 'Protokolle', active: index == 5, onTap: () => onSelect!(5)),
+          ],
+
+          const Spacer(),
+
+          // Logo block
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.pets, color: Color(0xFF3F7F46), size: 28),
+                      const SizedBox(width: 8),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('PetCare', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF3F7F46))),
+                          Text('Admin', style: TextStyle(fontSize: 10, color: Colors.black54)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (isAdmin) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: onLogout,
+                      icon: const Icon(Icons.logout, color: Colors.white70, size: 16),
+                      label: const Text('Logout', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      style: TextButton.styleFrom(alignment: Alignment.centerLeft),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
         ],
       ),
@@ -159,24 +148,17 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color:
-          active ? Colors.black.withOpacity(0.15) : Colors.transparent,
+          color: active ? Colors.black.withOpacity(0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
-            ),
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
           ],
         ),
       ),
